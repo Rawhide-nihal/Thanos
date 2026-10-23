@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { BackgroundManager } from '@/background/BackgroundManager';
 import { AnimationController } from '@/effects/animation/AnimationController';
 
 describe('AnimationController - State Machine & Transitions', () => {
@@ -7,7 +8,16 @@ describe('AnimationController - State Machine & Transitions', () => {
   beforeEach(() => {
     controller = AnimationController.getInstance();
     controller.reset();
+    vi.spyOn(BackgroundManager.getInstance(), 'getState').mockReturnValue({
+      calibrationState: 'CALIBRATED',
+      countdownSeconds: 0,
+      hasCleanBackground: true,
+      captureTimestamp: 1,
+      warningMessage: null,
+    });
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   it('1. Initializes in VISIBLE state', () => {
     expect(controller.getState()).toBe('VISIBLE');
