@@ -33,6 +33,8 @@ export const StudioApp: React.FC = () => {
   const virtualCameraManager = VirtualCameraManager.getInstance();
 
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cleanOutputRef = useRef<HTMLCanvasElement | null>(null);
+  const [isCleanOutput, setIsCleanOutput] = useState(false);
 
   // Local state
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -72,19 +74,16 @@ export const StudioApp: React.FC = () => {
 
     // 4. Connect output canvas to preview view
     const renderCanvas = outputManager.getOutputCanvas();
-    const previewCanvas = previewCanvasRef.current;
     let animId: number;
 
     const copyLoop = () => {
-      if (previewCanvas && renderCanvas) {
-        if (previewCanvas.width !== renderCanvas.width || previewCanvas.height !== renderCanvas.height) {
-          previewCanvas.width = renderCanvas.width;
-          previewCanvas.height = renderCanvas.height;
+      for (const displayCanvas of [previewCanvasRef.current, cleanOutputRef.current]) {
+        if (!displayCanvas) continue;
+        if (displayCanvas.width !== renderCanvas.width || displayCanvas.height !== renderCanvas.height) {
+          displayCanvas.width = renderCanvas.width;
+          displayCanvas.height = renderCanvas.height;
         }
-        const ctx = previewCanvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(renderCanvas, 0, 0);
-        }
+        displayCanvas.getContext('2d')?.drawImage(renderCanvas, 0, 0);
       }
       setFps(outputManager.getFPS());
       setVisionDiag(visionEngine.getDiagnostics());
@@ -101,6 +100,29 @@ export const StudioApp: React.FC = () => {
       cancelAnimationFrame(animId);
     };
   }, []);
+
+  useEffect(() => {
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsCleanOutput(false);
+    };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, []);
+
+  const enterCleanOutput = () => {
+    // OBS must capture the SAME running page, otherwise camera and calibration state are lost.
+    if (!isCameraActive) {
+      console.warn('SnapShift: Start your camera before opening clean output.');
+      return;
+    }
+    if (!bgState.hasCleanBackground) {
+      console.warn('SnapShift: Calibrate the background before opening clean output.');
+      return;
+    }
+    outputManager.setPreviewMode('processed');
+    setPreviewMode('processed');
+    setIsCleanOutput(true);
+  };
 
   const handleToggleCamera = async () => {
     if (isCameraActive) {
@@ -262,8 +284,8 @@ export const StudioApp: React.FC = () => {
 
           <button
             className="btn btn-secondary"
-            onClick={() => virtualCameraManager.openCleanOutputWindow()}
-            title="Open frameless 16:9 clean output for OBS Window Capture"
+            onClick={enterCleanOutput}
+            title="Switch this Studio window into clean OBS capture mode (Esc to exit)"
           >
             <Tv size={15} />
             Clean Output (OBS)
@@ -740,11 +762,11 @@ export const StudioApp: React.FC = () => {
 
                 <button
                   className="btn btn-cyan"
-                  onClick={() => virtualCameraManager.openCleanOutputWindow()}
+                  onClick={enterCleanOutput}
                   style={{ width: '100%' }}
                 >
                   <ExternalLink size={15} />
-                  Open Clean Output Window (1280x720)
+                  Switch to Clean OBS Output (Esc to return)
                 </button>
 
                 <div
@@ -803,6 +825,25 @@ export const StudioApp: React.FC = () => {
           </div>
         </aside>
       </div>
+      {isCleanOutput && (
+        <div
+          aria-label="SnapShift clean camera output for OBS Window Capture"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100000,
+            background: '#000',
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden',
+          }}
+        >
+          <canvas
+            ref={cleanOutputRef}
+            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
+          />
+        </div>
+      )}
     </div>
   );
 };
