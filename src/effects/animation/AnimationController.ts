@@ -30,6 +30,7 @@ export class AnimationController {
   private listeners: Set<AnimationStateListener> = new Set();
   private frozenForegroundCanvas: HTMLCanvasElement | null = null;
   private frozenForegroundCtx: CanvasRenderingContext2D | null = null;
+  private frozenMask: { data: Float32Array; width: number; height: number } | null = null;
 
   private constructor() {
     this.particleEngine = new ParticleEngine();
@@ -132,6 +133,7 @@ export class AnimationController {
     this.state = 'VISIBLE';
     this.animationProgress = 0.0;
     this.particleEngine.clear();
+    this.frozenMask = null;
     this.visionEngine.reset();
     this.notify();
   }
@@ -177,6 +179,10 @@ export class AnimationController {
     return this.frozenForegroundCanvas;
   }
 
+  public getFrozenSegmentationMask(): { data: Float32Array; width: number; height: number } | null {
+    return this.frozenMask;
+  }
+
   public getAnimationProgress(): number {
     return this.animationProgress;
   }
@@ -200,6 +206,7 @@ export class AnimationController {
     }
 
     if (mask.data && mask.width > 0 && mask.height > 0) {
+      this.frozenMask = { data: new Float32Array(mask.data), width: mask.width, height: mask.height };
       const spawnConfig: ParticleSpawnConfig = {
         video,
         maskData: mask.data,
