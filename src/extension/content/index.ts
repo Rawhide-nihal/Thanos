@@ -51,7 +51,7 @@ function createMeetFloatingBadge(): void {
         display: inline-block;
       "></span>
       <span>SnapShift</span>
-      <span style="color: #a78bfa; font-size: 11px;">(Ready)</span>
+      <span style="color: #fbbf24; font-size: 11px;">(Use OBS camera)</span>
     </div>
   `;
 
@@ -78,7 +78,7 @@ if (document.readyState === 'loading') {
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_MEET_STATUS') {
-    sendResponse({ active: true, url: window.location.href });
+    sendResponse({ active: false, mode: 'OBS_REQUIRED', url: window.location.href });
   } else if (message.type === 'SNAPSHIFT_SET_ENABLED') {
     window.postMessage({ type: 'SNAPSHIFT_SET_ENABLED', enabled: message.enabled }, '*');
     sendResponse({ ok: true });
