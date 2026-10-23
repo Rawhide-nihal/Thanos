@@ -166,6 +166,31 @@ export class CameraManager {
           try {
             const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             this.currentStream = fallbackStream;
+            const fallbackTrack = fallbackStream.getVideoTracks()[0];
+            const fallbackSettings = fallbackTrack.getSettings();
+            if (!this.videoElement) {
+              this.videoElement = document.createElement('video');
+              this.videoElement.autoplay = true;
+              this.videoElement.playsInline = true;
+              this.videoElement.muted = true;
+            }
+            this.videoElement.srcObject = fallbackStream;
+            await this.videoElement.play().catch(() => {});
+            fallbackTrack.onended = () => this.updateState({
+              isStreaming: false,
+              error: 'Camera disconnected or track ended unexpectedly.',
+            });
+            this.updateState({
+              isStreaming: true,
+              permissionGranted: true,
+              selectedDeviceId: fallbackSettings.deviceId || '',
+              activeResolution: {
+                width: fallbackSettings.width || 640,
+                height: fallbackSettings.height || 480,
+              },
+              activeFPS: fallbackSettings.frameRate || 30,
+              error: null,
+            });
             return fallbackStream;
           } catch (fallbackErr) {
             friendlyError = `Failed to obtain camera with fallback constraints: ${String(fallbackErr)}`;
