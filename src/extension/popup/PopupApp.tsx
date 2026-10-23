@@ -28,7 +28,7 @@ export const PopupApp: React.FC = () => {
   const [devices, setDevices] = useState<CameraDeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState('');
   const [bgState, setBgState] = useState<BackgroundState>(bgManager.getState());
-  const [animMetrics, setAnimMetrics] = useState<AnimationMetrics>(animController.getMetrics());
+  const [, setAnimMetrics] = useState<AnimationMetrics>(animController.getMetrics());
   const [visionDiag, setVisionDiag] = useState<VisionDiagnostics>(visionEngine.getDiagnostics());
   const [meetStatus, setMeetStatus] = useState<MeetStatus>({ isMeetTabOpen: false, tabUrl: null, interceptorReady: false });
 
@@ -97,13 +97,13 @@ export const PopupApp: React.FC = () => {
   const openOutput = () => {
     if (typeof chrome !== 'undefined' && chrome.windows) {
       chrome.windows.create({
-        url: chrome.runtime.getURL('output.html'),
+        url: chrome.runtime.getURL('studio.html'),
         type: 'popup',
         width: 1280,
         height: 720,
       });
     } else {
-      window.open('/output.html', '_blank');
+      window.open('/studio.html', '_blank');
     }
   };
 
@@ -201,7 +201,7 @@ export const PopupApp: React.FC = () => {
           ) : (
             <AlertTriangle size={12} color="#94a3b8" />
           )}
-          <span>{meetStatus.isMeetTabOpen ? 'Meet Connected' : 'No Meet Tab'}</span>
+          <span>{meetStatus.isMeetTabOpen ? 'Meet tab (use OBS)' : 'No Meet Tab'}</span>
         </div>
       </div>
 
@@ -260,19 +260,19 @@ export const PopupApp: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
           <button
             className="btn btn-secondary"
-            onClick={() => animController.triggerDisappear()}
-            disabled={animMetrics.state !== 'VISIBLE'}
+            onClick={openStudio}
+            
             style={{ fontSize: '11px', padding: '6px' }}
           >
-            Disappear (Ctrl+Shift+D)
+            Disappear in Studio
           </button>
           <button
             className="btn btn-secondary"
-            onClick={() => animController.triggerReappear()}
-            disabled={animMetrics.state !== 'INVISIBLE'}
+            onClick={openStudio}
+            
             style={{ fontSize: '11px', padding: '6px' }}
           >
-            Reappear (Ctrl+Shift+R)
+            Reappear in Studio
           </button>
         </div>
       </div>
@@ -284,7 +284,7 @@ export const PopupApp: React.FC = () => {
         style={{ width: '100%', fontSize: '12px', justifyContent: 'center' }}
       >
         <Tv size={14} />
-        Open Clean OBS Output Window
+        Open Studio for OBS Setup
       </button>
     </div>
   );

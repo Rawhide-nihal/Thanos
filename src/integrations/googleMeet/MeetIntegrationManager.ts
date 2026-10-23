@@ -31,7 +31,7 @@ export class MeetIntegrationManager {
         return {
           isMeetTabOpen: true,
           tabUrl: tabs[0].url || 'https://meet.google.com',
-          interceptorReady: true,
+          interceptorReady: false,
         };
       }
     } catch {

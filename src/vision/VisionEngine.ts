@@ -27,6 +27,7 @@ export class VisionEngine {
 
   private inferenceLatency = 0;
   private snapListeners: Set<SnapCallback> = new Set();
+  private manualEventInProgress = false;
 
   private constructor() {
     const settings = this.settingsStore.getSettings();
@@ -82,7 +83,13 @@ export class VisionEngine {
   }
 
   public triggerManualSnap(): void {
-    this.snapDetector.triggerManualSnap();
+    // Manual testing intentionally bypasses visual/audio confirmation without double-dispatching.
+    this.manualEventInProgress = true;
+    try {
+      this.snapDetector.triggerManualSnap();
+    } finally {
+      this.manualEventInProgress = false;
+    }
   }
 
   public reset(): void {
@@ -147,6 +154,11 @@ export class VisionEngine {
   }
 
   private handleSnapDetected(): void {
+    if (this.manualEventInProgress) {
+      for (const listener of this.snapListeners) listener();
+      return;
+    }
+
     const mode = this.settingsStore.getSettings().detectionMode;
 
     if (mode === 'manual') {

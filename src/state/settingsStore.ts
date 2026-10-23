@@ -60,6 +60,15 @@ export class SettingsStore {
 
   private constructor() {
     this.loadSettings();
+    // Extension popup, Studio and output windows run in different JS contexts.
+    // Synchronize the persisted controls instead of treating each singleton as global.
+    if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'local' || !changes[STORAGE_KEY]?.newValue) return;
+        this.settings = { ...DEFAULT_SETTINGS, ...changes[STORAGE_KEY].newValue };
+        this.notify();
+      });
+    }
   }
 
   public static getInstance(): SettingsStore {

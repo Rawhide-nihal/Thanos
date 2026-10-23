@@ -66,6 +66,7 @@ export class ParticleEngine {
         alpha: true,
         antialias: true,
         premultipliedAlpha: false,
+        preserveDrawingBuffer: true,
       });
 
       if (!this.gl) {
@@ -292,6 +293,9 @@ export class ParticleEngine {
     if (!gl || !this.program || !this.vao) return;
 
     gl.viewport(0, 0, width, height);
+    // Transparent layer must be cleared each frame or old dust remains visible.
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(this.program);
 
     gl.enable(gl.BLEND);

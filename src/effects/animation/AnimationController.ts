@@ -2,6 +2,7 @@ import { AnimationState, SettingsStore } from '@/state/settingsStore';
 import { ParticleEngine, ParticleSpawnConfig } from '../particles/ParticleEngine';
 import { BackgroundManager } from '@/background/BackgroundManager';
 import { VisionEngine } from '@/vision/VisionEngine';
+import { CameraManager } from '@/camera/CameraManager';
 
 export interface AnimationMetrics {
   state: AnimationState;
@@ -23,11 +24,13 @@ export class AnimationController {
   private particleEngine: ParticleEngine;
   private backgroundManager = BackgroundManager.getInstance();
   private visionEngine = VisionEngine.getInstance();
+  private cameraManager = CameraManager.getInstance();
   private settingsStore = SettingsStore.getInstance();
 
   private listeners: Set<AnimationStateListener> = new Set();
   private frozenForegroundCanvas: HTMLCanvasElement | null = null;
   private frozenForegroundCtx: CanvasRenderingContext2D | null = null;
+  private frozenMask: { data: Float32Array; width: number; height: number } | null = null;
 
   private constructor() {
     this.particleEngine = new ParticleEngine();
@@ -40,7 +43,7 @@ export class AnimationController {
 
     // Listen to snap events from VisionEngine
     this.visionEngine.onSnap(() => {
-      this.handleSnapTrigger();
+      this.handleSnapTrigger(this.cameraManager.getVideoElement() || undefined);
     });
 
     this.initKeyboardShortcuts();
@@ -92,15 +95,17 @@ export class AnimationController {
 
     const bgState = this.backgroundManager.getState();
     if (!bgState.hasCleanBackground) {
-      console.warn('SnapShift: Triggered disappear without clean background calibration! Proceeding with fallback.');
+      console.warn('SnapShift: Calibrate a clean background before disappearing.');
+      return;
     }
 
     this.state = 'DISAPPEARING';
     this.animationProgress = 0.0;
     this.animationStartTime = performance.now();
 
-    if (video) {
-      this.snapshotAndSpawnParticles(video, false);
+    const activeVideo = video || this.cameraManager.getVideoElement();
+    if (activeVideo) {
+      this.snapshotAndSpawnParticles(activeVideo, false);
     }
 
     this.notify();
@@ -116,8 +121,9 @@ export class AnimationController {
     this.animationProgress = 0.0;
     this.animationStartTime = performance.now();
 
-    if (video) {
-      this.snapshotAndSpawnParticles(video, true);
+    const activeVideo = video || this.cameraManager.getVideoElement();
+    if (activeVideo) {
+      this.snapshotAndSpawnParticles(activeVideo, true);
     }
 
     this.notify();
@@ -127,6 +133,7 @@ export class AnimationController {
     this.state = 'VISIBLE';
     this.animationProgress = 0.0;
     this.particleEngine.clear();
+    this.frozenMask = null;
     this.visionEngine.reset();
     this.notify();
   }
@@ -172,6 +179,10 @@ export class AnimationController {
     return this.frozenForegroundCanvas;
   }
 
+  public getFrozenSegmentationMask(): { data: Float32Array; width: number; height: number } | null {
+    return this.frozenMask;
+  }
+
   public getAnimationProgress(): number {
     return this.animationProgress;
   }
@@ -195,6 +206,7 @@ export class AnimationController {
     }
 
     if (mask.data && mask.width > 0 && mask.height > 0) {
+      this.frozenMask = { data: new Float32Array(mask.data), width: mask.width, height: mask.height };
       const spawnConfig: ParticleSpawnConfig = {
         video,
         maskData: mask.data,

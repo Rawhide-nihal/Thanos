@@ -26,6 +26,8 @@ export class VideoOutputManager {
   private fgCtx: CanvasRenderingContext2D;
   private maskCanvas: HTMLCanvasElement;
   private maskCtx: CanvasRenderingContext2D;
+  private particleCanvas: HTMLCanvasElement;
+  private particlesUseWebGL = false;
 
   // Dependencies
   private cameraManager = CameraManager.getInstance();
@@ -58,8 +60,15 @@ export class VideoOutputManager {
     this.maskCanvas.height = 144;
     this.maskCtx = this.maskCanvas.getContext('2d', { willReadFrequently: true })!;
 
-    // Initialize particle engine context
-    this.animationController.getParticleEngine().set2DContext(this.outputCtx);
+    // WebGL requires a dedicated transparent layer; the final outgoing stream is Canvas2D.
+    // A single canvas cannot provide both 2D and WebGL2 contexts.
+    this.particleCanvas = document.createElement('canvas');
+    this.particleCanvas.width = 1280;
+    this.particleCanvas.height = 720;
+    const particles = this.animationController.getParticleEngine();
+    this.particlesUseWebGL = this.settingsStore.getSettings().hardwareAcceleration
+      && particles.initWebGL(this.particleCanvas);
+    if (!this.particlesUseWebGL) particles.set2DContext(this.outputCtx);
   }
 
   public static getInstance(): VideoOutputManager {
@@ -163,6 +172,15 @@ export class VideoOutputManager {
       this.outputCanvas.height = vh;
       this.fgCanvas.width = vw;
       this.fgCanvas.height = vh;
+      this.particleCanvas.width = vw;
+      this.particleCanvas.height = vh;
+    }
+
+    // The extension master switch must affect the real outgoing video.
+    if (!this.settingsStore.getSettings().enabled) {
+      if (this.animationController.getState() !== 'VISIBLE') this.animationController.reset();
+      this.outputCtx.drawImage(video, 0, 0, vw, vh);
+      return;
     }
 
     // 1. Process vision tasks (Hands & Segmentation)
@@ -207,46 +225,23 @@ export class VideoOutputManager {
       // Ordinary camera video
       ctx.drawImage(video, 0, 0, vw, vh);
     } else if (animState === 'INVISIBLE') {
-      // Subject is completely vanished!
-      // Draw clean background
-      if (cleanBg) {
-        ctx.drawImage(cleanBg, 0, 0, vw, vh);
-      } else {
-        // Fallback if background wasn't calibrated: blur/darken video background
-        ctx.drawImage(video, 0, 0, vw, vh);
-        ctx.fillStyle = 'rgba(15, 12, 32, 0.95)';
-        ctx.fillRect(0, 0, vw, vh);
-      }
+      this.drawReconstructedBackground(video, mask, vw, vh);
     } else if (animState === 'DISAPPEARING') {
       const progress = this.animationController.getAnimationProgress();
 
-      // Base background: clean room
-      if (cleanBg) {
-        ctx.drawImage(cleanBg, 0, 0, vw, vh);
-      } else {
-        ctx.drawImage(video, 0, 0, vw, vh);
-      }
+      this.drawReconstructedBackground(video, mask, vw, vh);
 
-      // Draw dissolving person foreground
-      this.drawDissolvingForeground(video, mask, 1.0 - progress, vw, vh);
-
-      // Render dissolving particles on top
-      this.animationController.getParticleEngine().render(vw, vh);
+      // Snapshot stops the person from moving independently of their disintegrating dust.
+      const frozen = this.animationController.getFrozenForegroundCanvas();
+      const frozenMask = this.animationController.getFrozenSegmentationMask() || mask;
+      this.drawDissolvingForeground(frozen || video, frozenMask, 1.0 - progress, vw, vh);
+      this.drawParticles(vw, vh);
     } else if (animState === 'REAPPEARING') {
       const progress = this.animationController.getAnimationProgress();
 
-      // Base background: clean room
-      if (cleanBg) {
-        ctx.drawImage(cleanBg, 0, 0, vw, vh);
-      } else {
-        ctx.drawImage(video, 0, 0, vw, vh);
-      }
-
-      // Draw materializing person foreground
+      this.drawReconstructedBackground(video, mask, vw, vh);
       this.drawDissolvingForeground(video, mask, progress, vw, vh);
-
-      // Render converging particles on top
-      this.animationController.getParticleEngine().render(vw, vh);
+      this.drawParticles(vw, vh);
     }
 
     // Optional debug landmark overlay (preview only if enabled)
@@ -257,10 +252,59 @@ export class VideoOutputManager {
   }
 
   /**
-   * Draws foreground person masked by the segmentation alpha
+   * Paint live room pixels outside the person and the calibrated empty room
+   * where the subject occludes it. Camera must remain stationary after calibration.
+   */
+  private drawReconstructedBackground(
+    video: HTMLVideoElement,
+    mask: { data: Float32Array | null; width: number; height: number },
+    vw: number,
+    vh: number
+  ): void {
+    const ctx = this.outputCtx;
+    ctx.drawImage(video, 0, 0, vw, vh);
+    const clean = this.backgroundManager.getCleanBackgroundCanvas();
+    if (!clean) return;
+    if (!mask.data || mask.width <= 0 || mask.height <= 0) {
+      ctx.drawImage(clean, 0, 0, vw, vh);
+      return;
+    }
+
+    if (this.maskCanvas.width !== mask.width || this.maskCanvas.height !== mask.height) {
+      this.maskCanvas.width = mask.width;
+      this.maskCanvas.height = mask.height;
+    }
+    const pixels = this.maskCtx.createImageData(mask.width, mask.height);
+    for (let i = 0; i < mask.data.length; i++) {
+      const a = Math.max(0, Math.min(1, (mask.data[i] - 0.05) * 4));
+      const j = i * 4;
+      pixels.data[j] = 255;
+      pixels.data[j + 1] = 255;
+      pixels.data[j + 2] = 255;
+      pixels.data[j + 3] = Math.round(a * 255);
+    }
+    this.maskCtx.putImageData(pixels, 0, 0);
+    this.fgCtx.clearRect(0, 0, vw, vh);
+    this.fgCtx.drawImage(clean, 0, 0, vw, vh);
+    this.fgCtx.globalCompositeOperation = 'destination-in';
+    this.fgCtx.drawImage(this.maskCanvas, 0, 0, vw, vh);
+    this.fgCtx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(this.fgCanvas, 0, 0, vw, vh);
+  }
+
+  private drawParticles(width: number, height: number): void {
+    const particles = this.animationController.getParticleEngine();
+    particles.render(width, height);
+    if (this.particlesUseWebGL && particles.getActiveParticleCount() > 0) {
+      this.outputCtx.drawImage(this.particleCanvas, 0, 0, width, height);
+    }
+  }
+
+  /**
+   * Applies a stable, position-dependent dissolve threshold, not a flat opacity fade.
    */
   private drawDissolvingForeground(
-    video: HTMLVideoElement,
+    video: HTMLVideoElement | HTMLCanvasElement,
     mask: { data: Float32Array | null; width: number; height: number },
     opacity: number,
     vw: number,
@@ -292,8 +336,23 @@ export class VideoOutputManager {
       pData[pIdx] = 255;
       pData[pIdx + 1] = 255;
       pData[pIdx + 2] = 255;
-      // Multiply confidence by animation dissolve opacity
-      pData[pIdx + 3] = Math.min(255, Math.max(0, Math.floor(conf * opacity * 255)));
+      const x = i % mask.width;
+      const y = Math.floor(i / mask.width);
+      const nx = x / Math.max(1, mask.width - 1);
+      const ny = y / Math.max(1, mask.height - 1);
+      const direction = this.settingsStore.getSettings().dissolveDirection;
+      let gradient = 1 - ny;
+      if (direction === 'wind_right') gradient = nx;
+      if (direction === 'radial_out') gradient = Math.min(1, Math.hypot(nx - 0.5, ny - 0.5) * 1.414);
+      const blockX = Math.floor(x / 4);
+      const blockY = Math.floor(y / 4);
+      // Stable spatial hash so pixels do not change dissolution order between frames.
+      let hash = (Math.imul(blockX, 374761393) + Math.imul(blockY, 668265263)) | 0;
+      hash = Math.imul(hash ^ (hash >>> 13), 1274126177);
+      const noise = ((hash ^ (hash >>> 16)) >>> 0) / 4294967295;
+      const threshold = 0.03 + 0.94 * (0.65 * gradient + 0.35 * noise);
+      const edgeAlpha = Math.min(1, Math.max(0, (threshold - (1 - opacity)) * 25));
+      pData[pIdx + 3] = Math.round(Math.min(1, Math.max(0, conf)) * edgeAlpha * 255);
     }
     this.maskCtx.putImageData(maskImgData, 0, 0);
 

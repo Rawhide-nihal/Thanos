@@ -1,42 +1,22 @@
-# Google Meet Integration Guide
+# Google Meet integration (accurate status)
 
-SnapShift provides two operating modes for Google Meet.
+SnapShift has a real webcam processing engine, but the previous MAIN-world `getUserMedia` interceptor returned the **original camera video track** instead of a processed track. It never delivered the effect to a remote participant.
 
----
+To avoid breaking Meet or misleading users, direct interception has been **disabled** pending a properly tested processed-video pipeline.
 
-## Mode A — Direct Chrome Extension Integration
+## Current recommended mode — OBS Virtual Camera
 
-The Chrome Extension automatically injects into Google Meet (`https://meet.google.com/*`) to intercept outgoing webcam video.
+1. Open SnapShift Studio.
+2. Start the webcam and calibrate an empty background.
+3. Test disappearance and reappearance in Studio.
+4. Enable **Clean Output (OBS)** in the **same Studio window**.
+5. Capture that window in OBS Studio, then start OBS Virtual Camera.
+6. In Google Meet's video settings, select **OBS Virtual Camera**, not the raw webcam.
+7. Verify in a second participant's view that the effect is visible.
+8. Use the normal microphone in Google Meet; it is separate from the video-only OBS source.
 
-### Step-by-Step Instructions:
+See [OBS_SETUP.md](./OBS_SETUP.md).
 
-1. **Start & Calibrate SnapShift**:
-   - Click the SnapShift extension icon in Chrome or open SnapShift Studio (`studio.html`).
-   - Click **Start Camera**.
-   - Click **Calibrate Background** and step outside the frame during the 3...2...1 countdown.
-   - Test a snap to ensure you disintegrate smoothly and the background remains visible.
+## Direct integration roadmap
 
-2. **Join Google Meet**:
-   - Open [meet.google.com](https://meet.google.com).
-   - Look for the small **SnapShift (Ready)** badge floating in the bottom-left corner of the Meet window.
-   - Join your meeting with camera turned on.
-
-3. **Perform the Snap**:
-   - Raise your hand in front of your camera and perform a natural finger snap.
-   - Your outgoing participant tile will disintegrate into particles and vanish into the background.
-   - Your microphone remains 100% functional. Other meeting participants continue to hear you speak.
-   - Other meeting participants' tiles remain completely untouched.
-
-4. **Reappear**:
-   - Snap again in front of the camera, or press `Ctrl + Shift + R` (or `Ctrl + Shift + 0` to reset).
-   - Your silhouette will reconstruct with converging particles and restore ordinary live video.
-
-> **Important Note:** If you toggle SnapShift on or off while already inside an active Google Meet room, Google Meet may cache its active media track. Simply toggle your camera off and back on in the Google Meet bottom toolbar, or refresh the Meet tab.
-
----
-
-## Mode B — OBS Studio Virtual Camera (Recommended Universal Fallback)
-
-If Google Meet updates its internal pipeline or security policies block direct stream patching, OBS Virtual Camera provides an ultra-reliable, hardware-accelerated 60 FPS fallback.
-
-See [OBS_SETUP.md](./OBS_SETUP.md) for full instructions.
+A future direct integration must supply the fully processed MediaStream video track to Meet, preserve microphone audio, handle track re-acquisition and Meet updates, and be verified from a separate receiving peer. The extension badge alone is not proof of integration.
