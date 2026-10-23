@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
 [![Chrome Extension](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-success.svg)](https://developer.chrome.com/docs/extensions/mv3/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-Vision_Tasks-orange.svg)](https://developers.google.com/mediapipe)
-[![Tests](https://img.shields.io/badge/Tests-24_Passed-brightgreen.svg)]()
+[![CI](https://github.com/Rawhide-nihal/Thanos/actions/workflows/ci.yml/badge.svg)](https://github.com/Rawhide-nihal/Thanos/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](./LICENSE)
 
 ---
@@ -40,9 +40,9 @@
   - Adaptive density presets: Battery (2,000), Balanced (5,000), High (8,000), and Cinematic (12,000) particles.
 - **Continuous Tracking during Invisibility**:
   - Continuously tracks your position even while vanished so that particles converge to your *new* location upon reappearance.
-- **Dual Google Meet Integration**:
-  - Direct Chrome Extension `getUserMedia` interception in the MAIN execution world.
-  - Universal OBS Studio Virtual Camera fallback with dedicated clean 16:9 output.
+- **Google Meet integration**:
+  - Supported workflow: calibrate in Studio, switch the SAME Studio window to clean capture mode, then capture with OBS Virtual Camera.
+  - Direct Chrome `getUserMedia` interception is disabled while unverified; the previous interceptor returned raw webcam video.
 - **SnapShift Studio Pro**:
   - Full-screen calibration test bench with live diagnostics (FPS, latency, landmark viewer, WebRTC loopback receiver test).
 
@@ -93,8 +93,8 @@ SnapDetector State Machine            BackgroundManager
                                                │
                          ┌─────────────────────┴─────────────────────┐
                          ▼                                           ▼
-            Direct Google Meet Interception              OBS Virtual Camera Fallback
-            (MAIN-world getUserMedia Hook)               (Clean 16:9 Window Capture)
+            Direct Meet integration: pending             OBS Virtual Camera (recommended)
+            (not connected in this release)              (same-window Studio clean output)
 ```
 
 See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for in-depth design details.
@@ -136,7 +136,7 @@ See [docs/INSTALLATION.md](./docs/INSTALLATION.md) for full setup instructions.
 1. **Open SnapShift**: Click the SnapShift icon in your Chrome toolbar or visit `studio.html`.
 2. **Start Camera**: Select your preferred webcam and click **Start Camera**.
 3. **Calibrate Background**: Click **Calibrate Background** and step outside the frame during the 3...2...1 countdown.
-4. **Join Google Meet**: Open [meet.google.com](https://meet.google.com). SnapShift connects to your camera feed.
+4. **Select the processed camera**: Switch Studio to **Clean Output (OBS)** in the same window, capture it in OBS, start OBS Virtual Camera, then select **OBS Virtual Camera** in Google Meet. The extension does not automatically replace the Google Meet webcam.
 5. **Snap to Vanish**: Perform a physical finger snap. Your silhouette dissolves into particles while your room remains visible!
 6. **Snap to Reappear**: Snap again to reconstruct your silhouette.
 
@@ -149,11 +149,12 @@ See [docs/INSTALLATION.md](./docs/INSTALLATION.md) for full setup instructions.
 
 ## 7. OBS Virtual Camera Mode
 
-For universal compatibility with Zoom, Microsoft Teams, Discord, and Google Meet:
-1. In SnapShift Studio, click **Clean Output (OBS)** (or open `output.html`).
-2. In OBS Studio, add a **Window Capture** source targeting `SnapShift Clean Output`.
-3. Click **Start Virtual Camera** in OBS.
-4. Select **OBS Virtual Camera** in Google Meet video settings.
+For the recommended Google Meet workflow:
+1. Start and calibrate the camera in SnapShift Studio.
+2. In the **same Studio window**, click **Clean Output (OBS)**. Press Escape to return to controls.
+3. In OBS Studio, add **Window Capture** of that Studio window and crop to the video area.
+4. Start **OBS Virtual Camera**.
+5. Select **OBS Virtual Camera** in Google Meet video settings.
 
 See [docs/OBS_SETUP.md](./docs/OBS_SETUP.md) for step-by-step guidance.
 
@@ -166,14 +167,13 @@ Run the automated test suite:
 npm test
 ```
 
-### Verified Test Summary:
-- **Snap Detection (8/8 Passed)**: Handles null inputs, rejects open hands/static pinches/slow releases, accurately identifies explosive kinematic snaps, enforces cooldowns, and supports both left and right hands.
-- **Animation Controller (7/7 Passed)**: State transitions (`VISIBLE` → `DISAPPEARING` → `INVISIBLE` → `REAPPEARING` → `VISIBLE`), duplicate snap suppression during transitions, and instant reset.
-- **Background Manager (4/4 Passed)**: Calibration countdown, frame capture, cancel, and reset.
-- **Camera Manager (3/3 Passed)**: Device discovery, lifecycle, track releases.
-- **Integration & WebRTC (2/2 Passed)**: Processed `MediaStream` capture and audio preservation.
+### Test scope and status
 
-Total: **24 Tests Passed** across 5 test suites.
+The repository includes unit tests for hand-gesture event recognition, animation state transitions, background calibration, camera lifecycle and stream construction. These tests are **not proof** that finger snapping works on a real webcam or that Meet receives a processed video track.
+
+The previous README and test guide marked all remote-participant tests as verified without supporting evidence. Those claims have been removed. New CI runs TypeScript checks, unit tests and a production build, but real two-participant verification must be performed on a machine with Chrome, a webcam, OBS and Google Meet.
+
+**Known limitation:** Direct Meet injection is not currently implemented. Use the same-window OBS capture workflow. The physical snap detector and particle realism require hands-on verification and calibration.
 
 See [docs/TESTING.md](./docs/TESTING.md) for protocol details.
 
