@@ -32,7 +32,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   } else if (message.type === 'OPEN_OUTPUT') {
     // Open clean 16:9 frameless pop-up window for OBS Window Capture
     chrome.windows.create({
-      url: chrome.runtime.getURL('output.html'),
+      url: chrome.runtime.getURL('studio.html'),
       type: 'popup',
       width: 1280,
       height: 720,
