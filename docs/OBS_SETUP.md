@@ -1,40 +1,28 @@
-# OBS Studio Virtual Camera Setup
+# OBS Virtual Camera — supported Google Meet workflow
 
-The OBS Virtual Camera mode provides 100% reliable compatibility with any video-conferencing tool (Google Meet, Zoom, Microsoft Teams, Discord, Webex).
+The current supported integration is **SnapShift Studio → same-window Clean Output → OBS Virtual Camera → Google Meet**.
 
----
+**Important:** the Google Meet browser interceptor is not active in this release. Merely seeing a SnapShift badge on Meet does not mean the processed video is connected. Use OBS Virtual Camera.
 
-## Prerequisites
-- [OBS Studio](https://obsproject.com/) (version 27 or later, free and open-source)
+## Steps
 
----
+1. Open `studio.html` through the extension or `npm run dev`.
+2. Start the webcam in Studio and verify that the preview displays your body.
+3. Click **Calibrate BG**, step completely out of frame during the countdown, and return.
+4. Use **Simulate Snap** to verify the local disappearance and reappearance. You may need to wait for the gesture cooldown.
+5. Keep Studio open in the same window. Click **Clean Output (OBS)**. This overlays its controls and uses the *same* running camera, background image, and animation. **Escape** returns to controls.
+6. Launch [OBS Studio](https://obsproject.com/). Add a **Window Capture** source selecting that Chrome/SnapShift Studio window. Disable cursor capture.
+7. Adjust the OBS source transform to fit the video canvas (typically 16:9). Do not capture another, uncalibrated Studio window.
+8. Choose **Start Virtual Camera** in OBS.
+9. Open Google Meet > Settings > Video > Camera and select **OBS Virtual Camera**. Leave your normal microphone selected separately.
+10. Snap while keeping the camera and Studio window running. OBS should broadcast the **processed** person-only effect. Ask someone in the meeting to confirm the actual received video.
 
-## 1-Minute Setup Guide
+### Controls and limitations
 
-1. **Open SnapShift Clean Output**:
-   - In SnapShift Studio or the Extension Popup, click **Open Clean Output (OBS)** (or visit `output.html`).
-   - A clean, frameless 16:9 window displaying only your processed camera feed will appear.
-
-2. **Configure OBS Studio**:
-   - Open OBS Studio on Windows.
-   - In the **Sources** dock at the bottom, click the **`+`** icon and choose **Window Capture**.
-   - Name the source `SnapShift Output` and click OK.
-   - In the window dropdown, select:
-     `[chrome.exe]: SnapShift Clean Output` (or `[output.html] SnapShift Clean Output`).
-   - Set **Capture Method** to `Windows 10 (1903 and up)` for zero-latency GPU capture.
-   - Leave "Capture Cursor" unchecked.
-   - Click OK.
-
-3. **Start OBS Virtual Camera**:
-   - In the bottom-right **Controls** panel of OBS Studio, click **Start Virtual Camera**.
-
-4. **Select OBS Camera in Google Meet**:
-   - Open Google Meet (`meet.google.com`).
-   - Click the 3 dots (More options) > **Settings** > **Video**.
-   - Under **Camera**, select **OBS Virtual Camera**.
-   - Keep your standard physical microphone selected under **Audio**.
-   - Close settings.
-
-5. **You're All Set**:
-   - Perform a snap to dissolve into particles!
-   - Every participant in your meeting will see your video tile disintegrate and leave your real room visible.
+- Use **Escape** inside the Studio window to return from clean mode. Set the preview back to processed output before entering clean mode again.
+- The background requires a stationary webcam and a clean calibration image.
+- Google Meet integration, webcam frame rate, and true finger-snap recognition still require testing on your physical Windows setup.
+- Do not minimize or close the Studio window during Window Capture; capture behavior depends on OS/OBS capture method.
+- If OBS shows a black frame, change Window Capture method or enable browser hardware acceleration, then reacquire the window.
+- If Chrome displays a dark frame instead of your room, recalibrate and confirm MediaPipe segmentation loaded.
+- **Direct Chrome camera injection does not currently work** and must not be described as tested.
