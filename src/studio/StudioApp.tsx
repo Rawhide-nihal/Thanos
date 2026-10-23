@@ -312,6 +312,7 @@ export const StudioApp: React.FC = () => {
         <div
           style={{
             flex: 1,
+            minWidth: 0,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -469,6 +470,10 @@ export const StudioApp: React.FC = () => {
         <aside
           style={{
             width: '380px',
+            maxWidth: '100%',
+            flexShrink: 0,
+            minWidth: 0,
+            overflow: 'hidden',
             borderLeft: '1px solid var(--border-color)',
             background: 'var(--bg-secondary)',
             display: 'flex',
@@ -520,7 +525,7 @@ export const StudioApp: React.FC = () => {
           </div>
 
           {/* Tab Content */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', padding: '20px' }}>
             {activeTab === 'controls' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {/* Camera Source Selector */}
@@ -543,7 +548,7 @@ export const StudioApp: React.FC = () => {
                 </div>
 
                 {/* Primary Action Buttons */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
                   <button
                     className={`btn ${isCameraActive ? 'btn-danger' : 'btn-primary'}`}
                     onClick={handleToggleCamera}
@@ -578,24 +583,26 @@ export const StudioApp: React.FC = () => {
                     Test animations directly or press keyboard shortcuts.
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginBottom: '10px' }}>
                     <button
                       className="btn btn-secondary"
                       onClick={() => animController.triggerDisappear(cameraManager.getVideoElement() || undefined)}
                       disabled={animMetrics.state !== 'VISIBLE' || !isCameraActive}
+                      title="Disappear (Ctrl+Shift+D)"
                     >
-                      Disappear (Ctrl+Shift+D)
+                      Disappear
                     </button>
                     <button
                       className="btn btn-secondary"
                       onClick={() => animController.triggerReappear(cameraManager.getVideoElement() || undefined)}
                       disabled={animMetrics.state !== 'INVISIBLE' || !isCameraActive}
+                      title="Reappear (Ctrl+Shift+R)"
                     >
-                      Reappear (Ctrl+Shift+R)
+                      Reappear
                     </button>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
                     <button
                       className="btn btn-primary"
                       onClick={() => visionEngine.triggerManualSnap()}
@@ -607,9 +614,10 @@ export const StudioApp: React.FC = () => {
                     <button
                       className="btn btn-secondary"
                       onClick={() => animController.reset()}
+                      title="Reset effect (Ctrl+Shift+0)"
                     >
                       <RotateCcw size={14} />
-                      Reset (Ctrl+Shift+0)
+                      Reset
                     </button>
                   </div>
                 </div>
