@@ -66,6 +66,7 @@ export class ParticleEngine {
         alpha: true,
         antialias: true,
         premultipliedAlpha: false,
+        preserveDrawingBuffer: true,
       });
 
       if (!this.gl) {
