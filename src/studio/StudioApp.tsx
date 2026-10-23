@@ -109,6 +109,19 @@ export const StudioApp: React.FC = () => {
     return () => window.removeEventListener('keydown', onEscape);
   }, []);
 
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.runtime?.onMessage) return;
+    const handleCommand = (message: { type?: string; command?: string }) => {
+      if (message.type !== 'SNAPSHIFT_KEYBOARD_COMMAND') return;
+      const video = cameraManager.getVideoElement() || undefined;
+      if (message.command === 'disappear') animController.triggerDisappear(video);
+      if (message.command === 'reappear') animController.triggerReappear(video);
+      if (message.command === 'reset') animController.reset();
+    };
+    chrome.runtime.onMessage.addListener(handleCommand);
+    return () => chrome.runtime.onMessage.removeListener(handleCommand);
+  }, []);
+
   const enterCleanOutput = () => {
     // OBS must capture the SAME running page, otherwise camera and calibration state are lost.
     if (!isCameraActive) {
