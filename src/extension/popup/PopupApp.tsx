@@ -28,7 +28,7 @@ export const PopupApp: React.FC = () => {
   const [devices, setDevices] = useState<CameraDeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState('');
   const [bgState, setBgState] = useState<BackgroundState>(bgManager.getState());
-  const [animMetrics, setAnimMetrics] = useState<AnimationMetrics>(animController.getMetrics());
+  const [, setAnimMetrics] = useState<AnimationMetrics>(animController.getMetrics());
   const [visionDiag, setVisionDiag] = useState<VisionDiagnostics>(visionEngine.getDiagnostics());
   const [meetStatus, setMeetStatus] = useState<MeetStatus>({ isMeetTabOpen: false, tabUrl: null, interceptorReady: false });
 
