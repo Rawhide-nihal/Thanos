@@ -2,6 +2,7 @@ import { AnimationState, SettingsStore } from '@/state/settingsStore';
 import { ParticleEngine, ParticleSpawnConfig } from '../particles/ParticleEngine';
 import { BackgroundManager } from '@/background/BackgroundManager';
 import { VisionEngine } from '@/vision/VisionEngine';
+import { CameraManager } from '@/camera/CameraManager';
 
 export interface AnimationMetrics {
   state: AnimationState;
@@ -23,6 +24,7 @@ export class AnimationController {
   private particleEngine: ParticleEngine;
   private backgroundManager = BackgroundManager.getInstance();
   private visionEngine = VisionEngine.getInstance();
+  private cameraManager = CameraManager.getInstance();
   private settingsStore = SettingsStore.getInstance();
 
   private listeners: Set<AnimationStateListener> = new Set();
@@ -40,7 +42,7 @@ export class AnimationController {
 
     // Listen to snap events from VisionEngine
     this.visionEngine.onSnap(() => {
-      this.handleSnapTrigger();
+      this.handleSnapTrigger(this.cameraManager.getVideoElement() || undefined);
     });
 
     this.initKeyboardShortcuts();
@@ -92,15 +94,17 @@ export class AnimationController {
 
     const bgState = this.backgroundManager.getState();
     if (!bgState.hasCleanBackground) {
-      console.warn('SnapShift: Triggered disappear without clean background calibration! Proceeding with fallback.');
+      console.warn('SnapShift: Calibrate a clean background before disappearing.');
+      return;
     }
 
     this.state = 'DISAPPEARING';
     this.animationProgress = 0.0;
     this.animationStartTime = performance.now();
 
-    if (video) {
-      this.snapshotAndSpawnParticles(video, false);
+    const activeVideo = video || this.cameraManager.getVideoElement();
+    if (activeVideo) {
+      this.snapshotAndSpawnParticles(activeVideo, false);
     }
 
     this.notify();
@@ -116,8 +120,9 @@ export class AnimationController {
     this.animationProgress = 0.0;
     this.animationStartTime = performance.now();
 
-    if (video) {
-      this.snapshotAndSpawnParticles(video, true);
+    const activeVideo = video || this.cameraManager.getVideoElement();
+    if (activeVideo) {
+      this.snapshotAndSpawnParticles(activeVideo, true);
     }
 
     this.notify();
