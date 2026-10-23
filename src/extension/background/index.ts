@@ -14,14 +14,9 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.commands.onCommand.addListener((command) => {
   console.log('SnapShift shortcut triggered:', command);
 
-  // Relay shortcut command to all active tabs
-  chrome.tabs.query({}, (tabs) => {
-    for (const tab of tabs) {
-      if (tab.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'KEYBOARD_COMMAND', command }).catch(() => {});
-      }
-    }
-  });
+  // Studio is an extension page, not a content script in a normal tab.
+  // tabs.sendMessage cannot reach its listeners; runtime messaging can.
+  chrome.runtime.sendMessage({ type: 'SNAPSHIFT_KEYBOARD_COMMAND', command }).catch(() => {});
 });
 
 // Handle extension messaging
