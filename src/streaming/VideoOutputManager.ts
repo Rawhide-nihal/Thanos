@@ -233,7 +233,8 @@ export class VideoOutputManager {
 
       // Snapshot stops the person from moving independently of their disintegrating dust.
       const frozen = this.animationController.getFrozenForegroundCanvas();
-      this.drawDissolvingForeground(frozen || video, mask, 1.0 - progress, vw, vh);
+      const frozenMask = this.animationController.getFrozenSegmentationMask() || mask;
+      this.drawDissolvingForeground(frozen || video, frozenMask, 1.0 - progress, vw, vh);
       this.drawParticles(vw, vh);
     } else if (animState === 'REAPPEARING') {
       const progress = this.animationController.getAnimationProgress();
