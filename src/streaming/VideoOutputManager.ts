@@ -176,6 +176,13 @@ export class VideoOutputManager {
       this.particleCanvas.height = vh;
     }
 
+    // The extension master switch must affect the real outgoing video.
+    if (!this.settingsStore.getSettings().enabled) {
+      if (this.animationController.getState() !== 'VISIBLE') this.animationController.reset();
+      this.outputCtx.drawImage(video, 0, 0, vw, vh);
+      return;
+    }
+
     // 1. Process vision tasks (Hands & Segmentation)
     this.visionEngine.processVideoFrame(video, timestamp);
 
